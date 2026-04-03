@@ -2,7 +2,7 @@
 set -e  # 出错立即退出
 
 # ===================== 核心配置（改这里！）=====================
-REPO_URL="https://github.com/你的用户名/你的仓库名.git"  # 替换为你的代码仓库地址
+REPO_URL="https://github.com/duheng-ai/complaint-order.git"  # 替换为你的代码仓库地址
 TARGET_DIR="/opt/complaint-order"                        # 代码要部署的目录
 # ==================================================================
 
