@@ -9,7 +9,7 @@ red() { echo -e "\033[31m$1\033[0m"; }
 
 # 技能固定安装目录
 SKILL_DIR="$HOME/.openclaw/skills/complaint-order"
-REPO_URL="https://github.com/你的用户名/你的仓库名.git"
+REPO_URL="https://github.com/duheng-ai/complaint-order.git"
 
 # 欢迎信息
 green "========================================"
