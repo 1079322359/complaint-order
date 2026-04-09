@@ -34,9 +34,15 @@
 
 ### Windows (PowerShell)
 
+**一条命令安装（推荐）：**
+```powershell
+powershell -Command "iwr -useb https://raw.githubusercontent.com/duheng-ai/complaint-order/main/install.ps1 | iex"
+```
+
+**或分步执行：**
 ```powershell
 # 下载安装脚本
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/duheng-ai/complaint-order/main/install.ps1" -OutFile "install.ps1"
+iwr -useb https://raw.githubusercontent.com/duheng-ai/complaint-order/main/install.ps1 -OutFile install.ps1
 
 # 运行安装
 powershell -ExecutionPolicy Bypass -File install.ps1
@@ -48,7 +54,7 @@ powershell -ExecutionPolicy Bypass -File install.ps1
 curl -fsSL https://raw.githubusercontent.com/duheng-ai/complaint-order/main/install.sh | bash
 ```
 
-### 方法 2：手动安装
+### 手动安装
 
 ```bash
 # 1. 克隆仓库
