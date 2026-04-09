@@ -1,118 +1,59 @@
-﻿# complaint-order Skill Installer
-# Usage: powershell -ExecutionPolicy Bypass -File install.ps1
+﻿# complaint-order Installer for OpenClaw
+# Run: powershell -ExecutionPolicy Bypass -File install.ps1
 
-$ErrorActionPreference = "Stop"
-
-# Configuration
 $SkillName = "complaint-order"
 $RepoUrl = "https://github.com/duheng-ai/complaint-order.git"
-$OpenClawSkillsDir = "$env:USERPROFILE\.openclaw\workspace\skills"
-$TempDir = "$env:TEMP\$SkillName-install"
+$SkillsDir = "$env:USERPROFILE\.openclaw\workspace\skills"
+$TempDir = "$env:TEMP\$SkillName"
 
-Write-Host "========================================"
-Write-Host "  Installing $SkillName"
-Write-Host "========================================"
+Write-Host "=== Installing $SkillName ===" -ForegroundColor Green
 Write-Host ""
 
-# Step 1: Check OpenClaw
-Write-Host "[1/6] Checking OpenClaw installation..." -ForegroundColor Cyan
-if (-not (Test-Path $OpenClawSkillsDir)) {
-    Write-Host "ERROR: OpenClaw not found at: $OpenClawSkillsDir" -ForegroundColor Red
-    Write-Host "Please install OpenClaw first." -ForegroundColor Yellow
+# Check OpenClaw
+Write-Host "Checking OpenClaw..." -ForegroundColor Cyan
+if (-not (Test-Path $SkillsDir)) {
+    Write-Host "ERROR: OpenClaw not found" -ForegroundColor Red
     exit 1
 }
-Write-Host "OK: OpenClaw found" -ForegroundColor Green
-Write-Host ""
 
-# Step 2: Backup old version
-$SkillDir = Join-Path $OpenClawSkillsDir $SkillName
-if (Test-Path $SkillDir) {
-    Write-Host "[2/6] Backing up old version..." -ForegroundColor Cyan
-    $BackupDir = "$SkillDir-backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-    Move-Item -Path $SkillDir -Destination $BackupDir -Force
-    Write-Host "OK: Backup saved to: $BackupDir" -ForegroundColor Green
-    Write-Host ""
-} else {
-    Write-Host "[2/6] No old version found, skipping backup" -ForegroundColor Cyan
-    Write-Host ""
+# Backup old
+$TargetDir = Join-Path $SkillsDir $SkillName
+if (Test-Path $TargetDir) {
+    Write-Host "Backing up old version..." -ForegroundColor Yellow
+    $Backup = "$TargetDir-backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+    Move-Item $TargetDir $Backup -Force
 }
 
-# Step 3: Clone repository
-Write-Host "[3/6] Cloning repository from GitHub..." -ForegroundColor Cyan
-if (Test-Path $TempDir) {
-    Remove-Item -Path $TempDir -Recurse -Force
-}
+# Clone
+Write-Host "Cloning repository..." -ForegroundColor Cyan
+if (Test-Path $TempDir) { Remove-Item $TempDir -Recurse -Force }
 git clone $RepoUrl $TempDir
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "ERROR: Failed to clone repository" -ForegroundColor Red
-    Write-Host "Please check your network connection and try again." -ForegroundColor Yellow
-    exit 1
-}
-Write-Host "OK: Repository cloned" -ForegroundColor Green
-Write-Host ""
+if ($LASTEXITCODE -ne 0) { Write-Host "Clone failed" -ForegroundColor Red; exit 1 }
 
-# Step 4: Install skill
-Write-Host "[4/6] Installing skill to OpenClaw..." -ForegroundColor Cyan
-Move-Item -Path $TempDir -Destination $SkillDir -Force
-Write-Host "OK: Skill installed to: $SkillDir" -ForegroundColor Green
-Write-Host ""
+# Install
+Write-Host "Installing skill..." -ForegroundColor Cyan
+Move-Item $TempDir $TargetDir -Force
 
-# Step 5: Install dependencies
-Write-Host "[5/6] Installing npm dependencies..." -ForegroundColor Cyan
-Set-Location $SkillDir
+# Dependencies
+Write-Host "Installing dependencies..." -ForegroundColor Cyan
+Set-Location $TargetDir
 npm install
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "WARNING: npm install failed" -ForegroundColor Yellow
-    Write-Host "Please run manually: cd '$SkillDir' && npm install" -ForegroundColor White
-} else {
-    Write-Host "OK: Dependencies installed" -ForegroundColor Green
-}
-Write-Host ""
 
-# Step 6: Cleanup
-Write-Host "[6/6] Cleaning up temporary files..." -ForegroundColor Cyan
-if (Test-Path $TempDir) {
-    Remove-Item -Path $TempDir -Recurse -Force
-}
-Write-Host "OK: Cleanup completed" -ForegroundColor Green
-Write-Host ""
+# Cleanup
+if (Test-Path $TempDir) { Remove-Item $TempDir -Recurse -Force }
 
-# Configuration instructions
-Write-Host "========================================"
-Write-Host "  Configuration Required"
-Write-Host "========================================"
+# Config
 Write-Host ""
-Write-Host "Please edit this file:" -ForegroundColor Yellow
-Write-Host "  $SkillDir\index.js" -ForegroundColor White
-Write-Host ""
-Write-Host "Find the CONFIG section and modify:" -ForegroundColor Yellow
-Write-Host "  phone:    'your_phone_number'" -ForegroundColor White
-Write-Host "  password: 'your_password'" -ForegroundColor White
-Write-Host ""
+Write-Host "=== Configuration ===" -ForegroundColor Cyan
+Write-Host "Edit: $TargetDir\index.js" -ForegroundColor Yellow
+Write-Host "Set phone and password in CONFIG" -ForegroundColor White
 
-# Restart gateway
-Write-Host "========================================"
-Write-Host "  Restart OpenClaw Gateway"
-Write-Host "========================================"
+# Restart
 Write-Host ""
-Write-Host "Run this command:" -ForegroundColor Yellow
-Write-Host "  openclaw gateway restart" -ForegroundColor White
-Write-Host ""
+Write-Host "=== Restart Gateway ===" -ForegroundColor Cyan
+Write-Host "Run: openclaw gateway restart" -ForegroundColor White
 
-# Completion
-Write-Host "========================================"
-Write-Host "  Installation Complete!"
-Write-Host "========================================"
+# Done
 Write-Host ""
-Write-Host "Usage: Send messages containing these keywords:" -ForegroundColor Cyan
-Write-Host "  - 鑱旂郴鏂瑰紡 (contact information)" -ForegroundColor White
-Write-Host "  - 鎶曡瘔鍐呭 (complaint content)" -ForegroundColor White
-Write-Host "  - 璁㈠崟鍙?(order number)" -ForegroundColor White
-Write-Host ""
-Write-Host "Example message:" -ForegroundColor Cyan
-Write-Host "  鐢ㄦ埛鎶曡瘔鍐呭锛氬厖鍊?249 鍏冿紝缃戝崱鐨勪笉琛? -ForegroundColor White
-Write-Host "  鐢ㄦ埛鑱旂郴鏂瑰紡锛?8876509647" -ForegroundColor White
-Write-Host "  璁㈠崟鍙凤細4200003034202603317170467000" -ForegroundColor White
-Write-Host ""
-Write-Host "Enjoy!" -ForegroundColor Green
-Write-Host ""
+Write-Host "=== Complete ===" -ForegroundColor Green
+Write-Host "Send: LianXiFangShi, TouSuNeiRong, DingDanHao" -ForegroundColor Cyan

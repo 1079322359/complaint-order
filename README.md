@@ -32,26 +32,18 @@
 
 ## 📥 快速安装
 
-### 方法 1：一键安装脚本（推荐）
+### Windows (PowerShell)
 
-**Windows (PowerShell):**
-
-方式 A - 在线安装：
 ```powershell
 # 下载安装脚本
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/duheng-ai/complaint-order/main/install.ps1" -OutFile "install.ps1"
 
-# 运行（UTF-8 编码）
+# 运行安装
 powershell -ExecutionPolicy Bypass -File install.ps1
 ```
 
-方式 B - 双击运行（自动检测编码）：
-```
-1. 下载 install.bat
-2. 双击运行
-```
+### Linux / macOS (Bash)
 
-**Linux / macOS (Bash):**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/duheng-ai/complaint-order/main/install.sh | bash
 ```
