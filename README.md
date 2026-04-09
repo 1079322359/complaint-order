@@ -8,7 +8,7 @@
 
 | 项目 | 值 |
 |------|-----|
-| **技能 ID** | `channelcomplaint` |
+| **技能 ID** | `complaint-order` |
 | **技能名称** | 通道投诉订单查询 |
 | **技能目录名** | `complaint-order` |
 | **版本** | v2.3.1 |
@@ -229,7 +229,7 @@ complaint-order/
 ├── README.md              # 本文件（使用说明）
 ├── CHANGELOG.md           # 完整更新日志
 ├── SKILL.md               # OpenClaw 技能描述文件
-├── 更新报告-v2.3.0.md     # 用户版更新报告
+├── 更新报告-v2.3.1.md     # 用户版更新报告
 ├── index.js               # 技能主程序（含配置区域）
 ├── run.js                 # 测试运行脚本
 ├── package.json           # 依赖配置
