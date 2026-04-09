@@ -1,4 +1,4 @@
-﻿# complaint-order Skill Installer
+# complaint-order Skill Installer
 # Usage: powershell -ExecutionPolicy Bypass -File install.ps1
 
 $ErrorActionPreference = "Stop"
@@ -105,14 +105,14 @@ Write-Host "  Installation Complete!"
 Write-Host "========================================"
 Write-Host ""
 Write-Host "Usage: Send messages containing these keywords:" -ForegroundColor Cyan
-Write-Host "  - 鑱旂郴鏂瑰紡 (contact information)" -ForegroundColor White
-Write-Host "  - 鎶曡瘔鍐呭 (complaint content)" -ForegroundColor White
-Write-Host "  - 璁㈠崟鍙?(order number)" -ForegroundColor White
+Write-Host "  - 联系方式 (contact information)" -ForegroundColor White
+Write-Host "  - 投诉内容 (complaint content)" -ForegroundColor White
+Write-Host "  - 订单�?(order number)" -ForegroundColor White
 Write-Host ""
 Write-Host "Example message:" -ForegroundColor Cyan
-Write-Host "  鐢ㄦ埛鎶曡瘔鍐呭锛氬厖鍊?249 鍏冿紝缃戝崱鐨勪笉琛? -ForegroundColor White
-Write-Host "  鐢ㄦ埛鑱旂郴鏂瑰紡锛?8876509647" -ForegroundColor White
-Write-Host "  璁㈠崟鍙凤細4200003034202603317170467000" -ForegroundColor White
+Write-Host "  用户投诉内容：充�?249 元，网卡的不�? -ForegroundColor White
+Write-Host "  用户联系方式�?8876509647" -ForegroundColor White
+Write-Host "  订单号：4200003034202603317170467000" -ForegroundColor White
 Write-Host ""
 Write-Host "Enjoy!" -ForegroundColor Green
 Write-Host ""
