@@ -18,6 +18,7 @@
 - ✅ 更新 README.md - 添加 GitHub 仓库链接
 - ✅ 更新 CHANGELOG.md - 记录版本历史
 - ✅ 初始化 Git 仓库并推送至 GitHub
+- ✅ 新增 Interactive Card 交互卡片支持
 
 ---
 
