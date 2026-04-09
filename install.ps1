@@ -1,86 +1,62 @@
-﻿# complaint-order Skill Installer
-# Usage: powershell -ExecutionPolicy Bypass -File install.ps1
-
-Write-Host "Starting complaint-order skill installation..." -ForegroundColor Green
-
-# Configuration
+﻿# UTF-8 BOM marker - complaint-order Installer
 $SkillName = "complaint-order"
 $RepoUrl = "https://github.com/duheng-ai/complaint-order.git"
 $OpenClawSkillsDir = "$env:USERPROFILE\.openclaw\workspace\skills"
 $TempDir = "$env:TEMP\$SkillName-install"
 
-# Step 1: Check OpenClaw directory
-Write-Host "`nChecking OpenClaw directory..." -ForegroundColor Cyan
+Write-Host "=== Installing $SkillName ===" -ForegroundColor Green
+
+# Check OpenClaw
+Write-Host "`n[1/6] Checking OpenClaw..." -ForegroundColor Cyan
 if (-not (Test-Path $OpenClawSkillsDir)) {
-    Write-Host "Error: OpenClaw skills directory not found: $OpenClawSkillsDir" -ForegroundColor Red
-    Write-Host "Please make sure OpenClaw is installed" -ForegroundColor Yellow
+    Write-Host "ERROR: OpenClaw not found at $OpenClawSkillsDir" -ForegroundColor Red
+    Write-Host "Please install OpenClaw first" -ForegroundColor Yellow
     exit 1
 }
-Write-Host "OpenClaw skills directory found" -ForegroundColor Green
 
-# Step 2: Backup old version if exists
+# Backup old
 $SkillDir = Join-Path $OpenClawSkillsDir $SkillName
 if (Test-Path $SkillDir) {
-    Write-Host "`nOld version found, backing up..." -ForegroundColor Yellow
+    Write-Host "`n[2/6] Backing up old version..." -ForegroundColor Yellow
     $BackupDir = "$SkillDir-backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
     Move-Item -Path $SkillDir -Destination $BackupDir -Force
-    Write-Host "Backup saved to: $BackupDir" -ForegroundColor Green
 }
 
-# Step 3: Clone repository
-Write-Host "`nCloning repository..." -ForegroundColor Cyan
-if (Test-Path $TempDir) {
-    Remove-Item -Path $TempDir -Recurse -Force
-}
+# Clone
+Write-Host "`n[3/6] Cloning repository..." -ForegroundColor Cyan
+if (Test-Path $TempDir) { Remove-Item -Path $TempDir -Recurse -Force }
 git clone $RepoUrl $TempDir
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Clone failed" -ForegroundColor Red
-    exit 1
-}
-Write-Host "Repository cloned" -ForegroundColor Green
+if ($LASTEXITCODE -ne 0) { Write-Host "Clone failed" -ForegroundColor Red; exit 1 }
 
-# Step 4: Install skill
-Write-Host "`nInstalling skill..." -ForegroundColor Cyan
+# Install
+Write-Host "`n[4/6] Installing to skills directory..." -ForegroundColor Cyan
 Move-Item -Path $TempDir -Destination $SkillDir -Force
-Write-Host "Skill installed to: $SkillDir" -ForegroundColor Green
 
-# Step 5: Install dependencies
-Write-Host "`nInstalling dependencies..." -ForegroundColor Cyan
+# Dependencies
+Write-Host "`n[5/6] Installing npm dependencies..." -ForegroundColor Cyan
 Set-Location $SkillDir
 npm install
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Warning: npm install failed, please run manually: npm install" -ForegroundColor Yellow
-} else {
-    Write-Host "Dependencies installed" -ForegroundColor Green
-}
+if ($LASTEXITCODE -ne 0) { Write-Host "Warning: npm install failed" -ForegroundColor Yellow }
 
-# Step 6: Cleanup
-Write-Host "`nCleaning up..." -ForegroundColor Cyan
-if (Test-Path $TempDir) {
-    Remove-Item -Path $TempDir -Recurse -Force
-}
+# Cleanup
+Write-Host "`n[6/6] Cleaning up..." -ForegroundColor Cyan
+if (Test-Path $TempDir) { Remove-Item -Path $TempDir -Recurse -Force }
 
-# Step 7: Configuration instructions
-Write-Host "`nConfiguration required:" -ForegroundColor Cyan
-Write-Host "Please edit the following file and configure your account:" -ForegroundColor Yellow
-Write-Host "  $SkillDir\index.js" -ForegroundColor White
-Write-Host "`nFind CONFIG section and modify:" -ForegroundColor Yellow
-Write-Host "  phone: `"your_phone_number`"" -ForegroundColor White
-Write-Host "  password: `"your_password`"" -ForegroundColor White
+# Config
+Write-Host "`n=== Configuration Required ===" -ForegroundColor Cyan
+Write-Host "Edit this file: $SkillDir\index.js" -ForegroundColor Yellow
+Write-Host "Modify CONFIG section:" -ForegroundColor Yellow
+Write-Host "  phone = `"your_phone`"" -ForegroundColor White
+Write-Host "  password = `"your_password`"" -ForegroundColor White
 
-# Step 8: Restart gateway
-Write-Host "`nRestart OpenClaw gateway:" -ForegroundColor Cyan
-Write-Host "  openclaw gateway restart" -ForegroundColor White
+# Restart
+Write-Host "`n=== Restart Gateway ===" -ForegroundColor Cyan
+Write-Host "Run: openclaw gateway restart" -ForegroundColor White
 
-# Completion
-Write-Host "`nInstallation completed!" -ForegroundColor Green
-Write-Host "`nUsage:" -ForegroundColor Cyan
-Write-Host "Send messages containing these keywords to trigger:" -ForegroundColor Yellow
-Write-Host "  - 联系方式 (contact)" -ForegroundColor White
-Write-Host "  - 投诉内容 (complaint)" -ForegroundColor White
-Write-Host "  - 订单号 (order number)" -ForegroundColor White
-Write-Host "`nExample:" -ForegroundColor Cyan
-Write-Host "  用户投诉内容：充值 249 元，网卡的不行" -ForegroundColor White
-Write-Host "  用户联系方式：18876509647" -ForegroundColor White
-Write-Host "  订单号：4200003034202603317170467000" -ForegroundColor White
-Write-Host "`nEnjoy!" -ForegroundColor Green
+# Done
+Write-Host "`n=== Installation Complete ===" -ForegroundColor Green
+Write-Host "Send messages with: 鑱旂郴鏂瑰紡锛屾姇璇夊唴瀹癸紝璁㈠崟鍙? -ForegroundColor Cyan
+Write-Host "Example:" -ForegroundColor Cyan
+Write-Host "  鐢ㄦ埛鎶曡瘔鍐呭锛氬厖鍊?249 鍏? -ForegroundColor White
+Write-Host "  鐢ㄦ埛鑱旂郴鏂瑰紡锛?8876509647" -ForegroundColor White
+Write-Host "  璁㈠崟鍙凤細4200003034202603317170467000" -ForegroundColor White
