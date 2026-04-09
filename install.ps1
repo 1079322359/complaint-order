@@ -1,26 +1,27 @@
 <#
-  优化版：complaint-order 功能自动安装脚本  支持终端输入账号密码 + 自动配置 + 自动安装依赖
-  修复：TLS版本 + GitHub访问 + 错误处理
+  终极修复版：complaint-order 自动安装脚本
+  兼容 PowerShell 5.1 | 修复只读变量HOME | 解决乱码/网络问题
 #>
 
-# 强制编码 UTF-8，解决中文乱码
+# 强制编码 UTF-8 根治乱码
 $OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-
-# 关键修复：强制启用 TLS 1.2/1.3
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
+# 强制启用 TLS1.2 解决GitHub连接失败
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 Clear-Host
 Write-Host "=== complaint-order 功能 自动安装 ===" -ForegroundColor Cyan
 Write-Host ""
 
-# 路径定义
-$home = $env:USERPROFILE
-$openClawDir = Join-Path $home ".openclaw"
+# ======================
+# 核心修复：$home 改为 $userHome（避开系统只读变量）
+# ======================
+$userHome = $env:USERPROFILE
+$openClawDir = Join-Path $userHome ".openclaw"
 $skillsDir = Join-Path $openClawDir "skills"
 $targetDir = Join-Path $skillsDir "complaint-order"
 
-# 检查是否安装 OpenClaw
+# 检查OpenClaw
 Write-Host "[1/5] 检查 OpenClaw..." -ForegroundColor Yellow
 if (-not (Test-Path $skillsDir)) {
     Write-Host "错误：未找到 OpenClaw，请先安装主程序！" -ForegroundColor Red
@@ -34,7 +35,7 @@ if (Test-Path $targetDir) {
     Write-Host "[2/5] 备份旧版本..." -ForegroundColor Yellow
     $backup = "$targetDir-backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
     Move-Item -Path $targetDir -Destination $backup -Force
-    Write-Host "[OK] $backup" -ForegroundColor Green
+    Write-Host "[OK] 备份完成" -ForegroundColor Green
     Write-Host ""
 }
 
@@ -42,29 +43,16 @@ if (Test-Path $targetDir) {
 Write-Host "[3/5] 创建目录中..." -ForegroundColor Yellow
 New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
 
-# 下载（修复：增加重试 + 国内镜像备选）
+# 下载源码
 Write-Host "[4/5] 下载功能中..." -ForegroundColor Yellow
 $zip = Join-Path $env:TEMP "complaint-order.zip"
-$downloadUris = @(
-    "https://github.com/duheng-ai/complaint-order/archive/refs/heads/main.zip",
-    "https://ghproxy.com/https://github.com/duheng-ai/complaint-order/archive/refs/heads/main.zip"  # 国内代理镜像
-)
+$downloadUrl = "https://github.com/duheng-ai/complaint-order/archive/refs/heads/main.zip"
 
-$downloadSuccess = $false
-foreach ($uri in $downloadUris) {
-    try {
-        Write-Host "尝试下载：$uri" -ForegroundColor Gray
-        Invoke-WebRequest -UseBasicParsing -Uri $uri -OutFile $zip -TimeoutSec 30 -ErrorAction Stop
-        $downloadSuccess = $true
-        break
-    } catch {
-        Write-Host "下载失败（$uri）：$($_.Exception.Message)" -ForegroundColor Yellow
-        continue
-    }
+try {
+    Invoke-WebRequest -UseBasicParsing -Uri $downloadUrl -OutFile $zip -TimeoutSec 20
 }
-
-if (-not $downloadSuccess) {
-    Write-Host "错误：所有下载链接均失败，请检查网络或手动下载zip包！" -ForegroundColor Red
+catch {
+    Write-Host "下载失败，请检查网络！" -ForegroundColor Red
     exit 1
 }
 
@@ -73,60 +61,39 @@ Expand-Archive -Path $zip -DestinationPath $env:TEMP -Force
 Get-ChildItem "$env:TEMP/complaint-order-main/*" | Copy-Item -Destination $targetDir -Recurse -Force
 
 # 清理临时文件
-Remove-Item $zip -Force -ErrorAction SilentlyContinue
-Remove-Item "$env:TEMP/complaint-order-main" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item $zip -Force
+Remove-Item "$env:TEMP/complaint-order-main" -Recurse -Force
 Write-Host "[OK]" -ForegroundColor Green
 Write-Host ""
 
-# ======================
-# 优化点：终端输入账号密码
-# ======================
+# 配置账号密码
 Write-Host "[5/5] 配置账号密码" -ForegroundColor Yellow
-Write-Host ""
 $phone = Read-Host "请输入登录手机号"
 $password = Read-Host "请输入登录密码"
-Write-Host ""
 
-# 读取 index.js
+# 修改配置文件
 $indexFile = Join-Path $targetDir "index.js"
-if (-not (Test-Path $indexFile)) {
-    Write-Host "错误：未找到 index.js 文件！" -ForegroundColor Red
-    exit 1
-}
 $indexContent = Get-Content $indexFile -Raw -Encoding UTF8
-
-# 替换账号密码（保留其他配置）
 $indexContent = $indexContent -replace 'phone: ".*?"', "phone: `"$phone`""
 $indexContent = $indexContent -replace 'password: ".*?"', "password: `"$password`""
-
-# 写入 index.js
 $indexContent | Out-File $indexFile -Encoding UTF8
 
-Write-Host "✅ 账号已自动配置完成！" -ForegroundColor Green
+Write-Host "✅ 账号配置完成！" -ForegroundColor Green
 Write-Host ""
 
-# ======================
-# 优化点：自动安装依赖
-# ======================
+# 安装依赖
 Write-Host "正在安装 npm 依赖..." -ForegroundColor Yellow
 Set-Location $targetDir
 npm install
-# 替换 && 为 PowerShell 兼容的 if 判断
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "⚠️  npm install 失败，请手动执行：cd '$targetDir'; npm install" -ForegroundColor Yellow
-} else {
-    Write-Host "[OK]" -ForegroundColor Green
+    Write-Host "⚠️ npm install 失败，请手动执行" -ForegroundColor Yellow
 }
-Write-Host ""
+else {
+    Write-Host "[OK] 依赖安装完成" -ForegroundColor Green
+}
 
-# 完成
+# 完成提示
 Write-Host "========================================" -ForegroundColor Green
-Write-Host "  安装完成！" -ForegroundColor Green
-Write-Host "========================================" -ForegroundColor Green
-Write-Host ""
-Write-Host "📁 路径：$targetDir" -ForegroundColor Cyan
-Write-Host "📱 手机号：$phone" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "请重启 OpenClaw 网关：" -ForegroundColor Yellow
-Write-Host "  openclaw gateway restart" -ForegroundColor White
-Write-Host ""
+Write-Host "安装全部完成！" -ForegroundColor Green
+Write-Host "请重启网关：openclaw gateway restart"
+Write-Host "========================================"
