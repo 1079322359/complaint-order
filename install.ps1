@@ -1,10 +1,14 @@
 <#
   优化版：complaint-order 功能自动安装脚本  支持终端输入账号密码 + 自动配置 + 自动安装依赖
+  修复：TLS版本 + GitHub访问 + 错误处理
 #>
 
 # 强制编码 UTF-8，解决中文乱码
 $OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+# 关键修复：强制启用 TLS 1.2/1.3
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
 
 Clear-Host
 Write-Host "=== complaint-order 功能 自动安装 ===" -ForegroundColor Cyan
@@ -38,18 +42,39 @@ if (Test-Path $targetDir) {
 Write-Host "[3/5] 创建目录中..." -ForegroundColor Yellow
 New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
 
-# 下载
+# 下载（修复：增加重试 + 国内镜像备选）
 Write-Host "[4/5] 下载功能中..." -ForegroundColor Yellow
 $zip = Join-Path $env:TEMP "complaint-order.zip"
-Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/duheng-ai/complaint-order/archive/refs/heads/main.zip" -OutFile $zip
+$downloadUris = @(
+    "https://github.com/duheng-ai/complaint-order/archive/refs/heads/main.zip",
+    "https://ghproxy.com/https://github.com/duheng-ai/complaint-order/archive/refs/heads/main.zip"  # 国内代理镜像
+)
+
+$downloadSuccess = $false
+foreach ($uri in $downloadUris) {
+    try {
+        Write-Host "尝试下载：$uri" -ForegroundColor Gray
+        Invoke-WebRequest -UseBasicParsing -Uri $uri -OutFile $zip -TimeoutSec 30 -ErrorAction Stop
+        $downloadSuccess = $true
+        break
+    } catch {
+        Write-Host "下载失败（$uri）：$($_.Exception.Message)" -ForegroundColor Yellow
+        continue
+    }
+}
+
+if (-not $downloadSuccess) {
+    Write-Host "错误：所有下载链接均失败，请检查网络或手动下载zip包！" -ForegroundColor Red
+    exit 1
+}
 
 # 解压
 Expand-Archive -Path $zip -DestinationPath $env:TEMP -Force
 Get-ChildItem "$env:TEMP/complaint-order-main/*" | Copy-Item -Destination $targetDir -Recurse -Force
 
 # 清理临时文件
-Remove-Item $zip -Force
-Remove-Item "$env:TEMP/complaint-order-main" -Recurse -Force
+Remove-Item $zip -Force -ErrorAction SilentlyContinue
+Remove-Item "$env:TEMP/complaint-order-main" -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host "[OK]" -ForegroundColor Green
 Write-Host ""
 
@@ -64,6 +89,10 @@ Write-Host ""
 
 # 读取 index.js
 $indexFile = Join-Path $targetDir "index.js"
+if (-not (Test-Path $indexFile)) {
+    Write-Host "错误：未找到 index.js 文件！" -ForegroundColor Red
+    exit 1
+}
 $indexContent = Get-Content $indexFile -Raw -Encoding UTF8
 
 # 替换账号密码（保留其他配置）
