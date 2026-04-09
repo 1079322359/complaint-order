@@ -1,99 +1,103 @@
-﻿<#
-  浼樺寲鐗堬細complaint-order 鎶€鑳借嚜鍔ㄥ畨瑁呰剼鏈?  鏀寔缁堢杈撳叆璐﹀彿瀵嗙爜 + 鑷姩閰嶇疆 + 鑷姩瑁呬緷璧?#>
+<#
+  优化版：complaint-order 功能自动安装脚本  支持终端输入账号密码 + 自动配置 + 自动安装依赖
+#>
 
-# 寮哄埗缂栫爜 UTF-8锛屽交搴曡В鍐充贡鐮?$OutputEncoding = [System.Text.Encoding]::UTF8
+# 强制编码 UTF-8，解决中文乱码
+$OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 Clear-Host
-Write-Host "=== complaint-order 鎶€鑳?鑷姩瀹夎 ===" -ForegroundColor Cyan
+Write-Host "=== complaint-order 功能 自动安装 ===" -ForegroundColor Cyan
 Write-Host ""
 
-# 璺緞瀹氫箟
+# 路径定义
 $home = $env:USERPROFILE
 $openClawDir = Join-Path $home ".openclaw"
 $skillsDir = Join-Path $openClawDir "skills"
 $targetDir = Join-Path $skillsDir "complaint-order"
 
-# 妫€鏌ユ槸鍚﹀畨瑁?OpenClaw
-Write-Host "[1/5] 妫€鏌?OpenClaw..." -ForegroundColor Yellow
+# 检查是否安装 OpenClaw
+Write-Host "[1/5] 检查 OpenClaw..." -ForegroundColor Yellow
 if (-not (Test-Path $skillsDir)) {
-    Write-Host "閿欒锛氭湭鎵惧埌 OpenClaw锛岃鍏堝畨瑁呬富绋嬪簭锛? -ForegroundColor Red
+    Write-Host "错误：未找到 OpenClaw，请先安装主程序！" -ForegroundColor Red
     exit 1
 }
 Write-Host "[OK]" -ForegroundColor Green
 Write-Host ""
 
-# 澶囦唤鏃х増鏈?if (Test-Path $targetDir) {
-    Write-Host "[2/5] 澶囦唤鏃х増鏈?.." -ForegroundColor Yellow
+# 备份旧版本
+if (Test-Path $targetDir) {
+    Write-Host "[2/5] 备份旧版本..." -ForegroundColor Yellow
     $backup = "$targetDir-backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
     Move-Item -Path $targetDir -Destination $backup -Force
     Write-Host "[OK] $backup" -ForegroundColor Green
     Write-Host ""
 }
 
-# 鍒涘缓鐩綍
-Write-Host "[3/5] 鍒涘缓鐩綍涓?.." -ForegroundColor Yellow
+# 创建目录
+Write-Host "[3/5] 创建目录中..." -ForegroundColor Yellow
 New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
 
-# 涓嬭浇
-Write-Host "[4/5] 涓嬭浇鎶€鑳戒腑..." -ForegroundColor Yellow
+# 下载
+Write-Host "[4/5] 下载功能中..." -ForegroundColor Yellow
 $zip = Join-Path $env:TEMP "complaint-order.zip"
 Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/duheng-ai/complaint-order/archive/refs/heads/main.zip" -OutFile $zip
 
-# 瑙ｅ帇
+# 解压
 Expand-Archive -Path $zip -DestinationPath $env:TEMP -Force
 Get-ChildItem "$env:TEMP/complaint-order-main/*" | Copy-Item -Destination $targetDir -Recurse -Force
 
-# 娓呯悊涓存椂鏂囦欢
+# 清理临时文件
 Remove-Item $zip -Force
 Remove-Item "$env:TEMP/complaint-order-main" -Recurse -Force
 Write-Host "[OK]" -ForegroundColor Green
 Write-Host ""
 
 # ======================
-# 浼樺寲鐐癸細缁堢杈撳叆璐﹀彿瀵嗙爜
+# 优化点：终端输入账号密码
 # ======================
-Write-Host "[5/5] 閰嶇疆璐﹀彿瀵嗙爜" -ForegroundColor Yellow
+Write-Host "[5/5] 配置账号密码" -ForegroundColor Yellow
 Write-Host ""
-$phone = Read-Host "璇疯緭鍏ョ櫥褰曟墜鏈哄彿"
-$password = Read-Host "璇疯緭鍏ョ櫥褰曞瘑鐮?
+$phone = Read-Host "请输入登录手机号"
+$password = Read-Host "请输入登录密码"
 Write-Host ""
 
-# 璇诲彇 index.js
+# 读取 index.js
 $indexFile = Join-Path $targetDir "index.js"
 $indexContent = Get-Content $indexFile -Raw -Encoding UTF8
 
-# 鏇挎崲璐﹀彿瀵嗙爜锛堜繚鐣欏叾浠栭厤缃級
+# 替换账号密码（保留其他配置）
 $indexContent = $indexContent -replace 'phone: ".*?"', "phone: `"$phone`""
 $indexContent = $indexContent -replace 'password: ".*?"', "password: `"$password`""
 
-# 鍐欏叆 index.js
+# 写入 index.js
 $indexContent | Out-File $indexFile -Encoding UTF8
 
-Write-Host "鉁?璐﹀彿宸茶嚜鍔ㄩ厤缃畬鎴? -ForegroundColor Green
+Write-Host "✅ 账号已自动配置完成！" -ForegroundColor Green
 Write-Host ""
 
 # ======================
-# 浼樺寲鐐癸細鑷姩瀹夎渚濊禆
+# 优化点：自动安装依赖
 # ======================
-Write-Host "姝ｅ湪瀹夎 npm 渚濊禆..." -ForegroundColor Yellow
+Write-Host "正在安装 npm 依赖..." -ForegroundColor Yellow
 Set-Location $targetDir
 npm install
+# 替换 && 为 PowerShell 兼容的 if 判断
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "鈿狅笍  npm install 澶辫触锛岃鎵嬪姩鎵ц锛歝d '$targetDir' && npm install" -ForegroundColor Yellow
+    Write-Host "⚠️  npm install 失败，请手动执行：cd '$targetDir'; npm install" -ForegroundColor Yellow
 } else {
     Write-Host "[OK]" -ForegroundColor Green
 }
 Write-Host ""
 
-# 瀹屾垚
+# 完成
 Write-Host "========================================" -ForegroundColor Green
-Write-Host "  瀹夎瀹屾垚锛? -ForegroundColor Green
+Write-Host "  安装完成！" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "馃搧 璺緞锛?targetDir" -ForegroundColor Cyan
-Write-Host "馃摫 鎵嬫満鍙凤細$phone" -ForegroundColor Cyan
+Write-Host "📁 路径：$targetDir" -ForegroundColor Cyan
+Write-Host "📱 手机号：$phone" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "璇烽噸鍚?OpenClaw 缃戝叧锛? -ForegroundColor Yellow
+Write-Host "请重启 OpenClaw 网关：" -ForegroundColor Yellow
 Write-Host "  openclaw gateway restart" -ForegroundColor White
 Write-Host ""
