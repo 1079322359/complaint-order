@@ -1,39 +1,74 @@
-﻿[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$ProgressPreference = "SilentlyContinue"
+<#
+  优化版：complaint-order 技能自动安装脚本
+  支持终端输入账号密码 + 自动配置 + 自动装依赖
+#>
 
-$SkillName = "complaint-order"
-$RepoUrl = "https://github.com/duheng-ai/complaint-order.git"
-$SkillsDir = "$env:USERPROFILE\.openclaw\workspace\skills"
-$TempDir = "$env:TEMP\$SkillName"
+# 强制编码 UTF-8，彻底解决乱码
+$OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-Write-Host "=== 正在安装 complaint-order 技能 ===" -ForegroundColor Green
-Write-Host "[1/5] 检查 OpenClaw..." -ForegroundColor Cyan
-if (-not (Test-Path $SkillsDir)) { Write-Host "错误：未找到 OpenClaw" -ForegroundColor Red; exit 1 }
-Write-Host "[OK]" -ForegroundColor Green
+Clear-Host
+Write-Host "=== complaint-order 技能 自动安装 ===" -ForegroundColor Cyan
 
-$TargetDir = Join-Path $SkillsDir $SkillName
-if (Test-Path $TargetDir) {
-    Write-Host "[2/5] 备份旧版本..." -ForegroundColor Yellow
-    Move-Item $TargetDir "$TargetDir-backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')" -Force
+# 路径定义
+$home = $env:USERPROFILE
+$openClawDir = Join-Path $home ".openclaw"
+$skillsDir = Join-Path $openClawDir "skills"
+$targetDir = Join-Path $skillsDir "complaint-order"
+
+# 检查是否安装 OpenClaw
+if (-not (Test-Path $skillsDir)) {
+    Write-Host "错误：未找到 OpenClaw，请先安装主程序！" -ForegroundColor Red
+    exit 1
 }
 
-Write-Host "[3/5] 克隆仓库..." -ForegroundColor Cyan
-if (Test-Path $TempDir) { Remove-Item $TempDir -Recurse -Force }
-git clone $RepoUrl $TempDir
-if ($LASTEXITCODE -ne 0) { Write-Host "克隆失败" -ForegroundColor Red; exit 1 }
+# 创建目录
+Write-Host "[1/4] 创建目录中..." -ForegroundColor Yellow
+New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
 
-Write-Host "[4/5] 安装技能..." -ForegroundColor Cyan
-Move-Item $TempDir $TargetDir -Force
+# 下载
+Write-Host "[2/4] 下载技能中..." -ForegroundColor Yellow
+$zip = Join-Path $env:TEMP "complaint-order.zip"
+Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/duheng-ai/complaint-order/archive/refs/heads/main.zip" -OutFile $zip
 
-Write-Host "[5/5] 安装依赖..." -ForegroundColor Cyan
-Set-Location $TargetDir; npm install
+# 解压
+Expand-Archive -Path $zip -DestinationPath $env:TEMP -Force
+Get-ChildItem "$env:TEMP/complaint-order-main/*" | Copy-Item -Destination $targetDir -Recurse -Force
 
-Write-Host "`n=== 配置账号 ===" -ForegroundColor Cyan
-Write-Host "编辑：$TargetDir\index.js" -ForegroundColor Yellow
-Write-Host "修改 CONFIG 中的 phone 和 password`n" -ForegroundColor White
+# 清理临时文件
+Remove-Item $zip -Force
+Remove-Item "$env:TEMP/complaint-order-main" -Recurse -Force
 
-Write-Host "=== 重启网关 ===" -ForegroundColor Cyan
-Write-Host "运行：openclaw gateway restart`n" -ForegroundColor White
+# ======================
+# 优化点：终端输入账号密码
+# ======================
+Write-Host "[3/4] 配置账号密码" -ForegroundColor Yellow
+$phone = Read-Host "请输入登录手机号"
+$password = Read-Host "请输入登录密码"
 
-Write-Host "=== 安装完成 ===" -ForegroundColor Green
-Write-Host "使用方法：发送包含 联系方式、投诉内容、订单号 的消息`n" -ForegroundColor Cyan
+# 生成配置文件
+$config = @"
+module.exports = {
+  LOGIN: {
+    phone: "$phone",
+    password: "$password"
+  }
+};
+"@
+
+# 写入 config.js
+$configFile = Join-Path $targetDir "config.js"
+$config | Out-File $configFile -Encoding UTF8
+
+Write-Host "✅ 账号已自动配置完成" -ForegroundColor Green
+
+# ======================
+# 优化点：自动安装依赖
+# ======================
+Write-Host "[4/4] 自动安装 npm 依赖..." -ForegroundColor Yellow
+Set-Location $targetDir
+npm install --silent
+
+Write-Host "`n🎉 安装全部完成！" -ForegroundColor Green
+Write-Host "📁 路径：$targetDir`n" -ForegroundColor Cyan
+Write-Host "请重启 OpenClaw 网关即可使用！`n" -ForegroundColor Cyan
