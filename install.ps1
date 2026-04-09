@@ -1,4 +1,9 @@
-# 编码与网络修复
+<#
+  complaint-order Installer - Final Fixed Version
+  Fix: Join-Path Syntax Error + Enhanced Path Search + No Garbled
+#>
+
+# Fix Encoding & Network
 $OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -8,108 +13,114 @@ Write-Host "=== complaint-order Auto Installer ===" -ForegroundColor Cyan
 Write-Host ""
 
 # ==============================================
-# OpenClaw 目录查找
+#  Enhanced OpenClaw Path Finder (Fixed Syntax)
 # ==============================================
 function Find-OpenClaw {
-    $paths = @(
-        # 1. 默认用户目录
-        Join-Path $env:USERPROFILE ".openclaw",
-        # 2. 所有磁盘根目录
-        "D:\.openclaw", "E:\.openclaw", "F:\.openclaw",
-        # 3. 常见安装目录
-        "C:\Program Files\OpenClaw",
-        "C:\OpenClaw",
-        $env:OPENCLAW_PATH
-    )
+    $basePath = $env:USERPROFILE
+    $defaultPath = Join-Path $basePath ".openclaw"
+    
+    $searchPaths = @()
+    $searchPaths += $defaultPath
+    $searchPaths += "C:\OpenClaw"
+    $searchPaths += "D:\.openclaw"
+    $searchPaths += "E:\.openclaw"
+    $searchPaths += "F:\.openclaw"
+    $searchPaths += "C:\Program Files\OpenClaw"
 
-    # 遍历查找
-    foreach ($p in $paths) {
-        $testSkill = Join-Path $p "skills"
-        if (Test-Path $testSkill) {
-            return $p
+    
+    if ($env:OPENCLAW_PATH) {
+        $searchPaths += $env:OPENCLAW_PATH
+    }
+
+    foreach ($path in $searchPaths) {
+        $skillPath = Join-Path $path "skills"
+        if (Test-Path $skillPath) {
+            return $path
         }
     }
     return $null
 }
 
-# 开始查找
+# Start Search
 Write-Host "[1/5] Searching OpenClaw..." -ForegroundColor Yellow
 $openClawDir = Find-OpenClaw
 
 if (-not $openClawDir) {
     Write-Host "[ERROR] OpenClaw not found!" -ForegroundColor Red
+    Write-Host "Path checked: $searchPaths" -ForegroundColor Gray
     exit 1
 }
 
 $skillsDir = Join-Path $openClawDir "skills"
 $targetDir = Join-Path $skillsDir "complaint-order"
 
-Write-Host "[OK] OpenClaw found at: $openClawDir" -ForegroundColor Green
+Write-Host "[OK] OpenClaw located at: $openClawDir" -ForegroundColor Green
 Write-Host ""
 
-# 备份旧版本
+# Backup Old Version
 if (Test-Path $targetDir) {
     Write-Host "[2/5] Backing up old version..." -ForegroundColor Yellow
     $backup = "$targetDir-backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
     Move-Item -Path $targetDir -Destination $backup -Force
-    Write-Host "[OK] Backup done" -ForegroundColor Green
+    Write-Host "[OK] Backup completed" -ForegroundColor Green
     Write-Host ""
 }
 
-# 创建目录
+# Create Directory
 Write-Host "[3/5] Creating directory..." -ForegroundColor Yellow
 New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
 
-# 下载
-Write-Host "[4/5] Downloading..." -ForegroundColor Yellow
+# Download
+Write-Host "[4/5] Downloading files..." -ForegroundColor Yellow
 $zip = Join-Path $env:TEMP "complaint-order.zip"
-$url = "https://github.com/duheng-ai/complaint-order/archive/refs/heads/main.zip"
+$downloadUrl = "https://github.com/duheng-ai/complaint-order/archive/refs/heads/main.zip"
 
 try {
-    iwr -useb $url -OutFile $zip -TimeoutSec 20
+    Invoke-WebRequest -UseBasicParsing -Uri $downloadUrl -OutFile $zip -TimeoutSec 20
 }
 catch {
-    Write-Host "[ERROR] Download failed!" -ForegroundColor Red
+    Write-Host "[ERROR] Download failed! Check network." -ForegroundColor Red
     exit 1
 }
 
-# 解压
+# Unzip
 Expand-Archive -Path $zip -DestinationPath $env:TEMP -Force
 Get-ChildItem "$env:TEMP/complaint-order-main/*" | Copy-Item -Destination $targetDir -Recurse -Force
 
-# 清理
+# Clean Temp Files
 Remove-Item $zip -Force
 Remove-Item "$env:TEMP/complaint-order-main" -Recurse -Force
-Write-Host "[OK] Download success" -ForegroundColor Green
+Write-Host "[OK] Download & Unzip Success" -ForegroundColor Green
 Write-Host ""
 
-# 配置账号
-Write-Host "[5/5] Config account" -ForegroundColor Yellow
-$phone = Read-Host "Phone"
+# Configure Account
+Write-Host "[5/5] Configure your account" -ForegroundColor Yellow
+$phone = Read-Host "Phone Number"
 $password = Read-Host "Password"
 
+# Modify index.js
 $indexFile = Join-Path $targetDir "index.js"
 $content = Get-Content $indexFile -Raw -Encoding UTF8
 $content = $content -replace 'phone: ".*?"', "phone: `"$phone`""
 $content = $content -replace 'password: ".*?"', "password: `"$password`""
 $content | Out-File $indexFile -Encoding UTF8
 
-Write-Host "[OK] Account configured" -ForegroundColor Green
+Write-Host "[OK] Account configured successfully" -ForegroundColor Green
 Write-Host ""
 
-# 安装依赖
-Write-Host "Installing dependencies..." -ForegroundColor Yellow
+# Install Dependencies
+Write-Host "Installing npm dependencies..." -ForegroundColor Yellow
 Set-Location $targetDir
 npm install --silent
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "[WARN] Please run manually: npm install" -ForegroundColor Yellow
-}
-else {
+    Write-Host "[WARNING] npm install failed, please run manually" -ForegroundColor Yellow
+} else {
     Write-Host "[OK] Dependencies installed" -ForegroundColor Green
 }
 
-# 完成
+# Finish
 Write-Host "========================================" -ForegroundColor Green
-Write-Host "INSTALL SUCCESS!" -ForegroundColor Green
-Write-Host "Restart: openclaw gateway restart"
+Write-Host "INSTALL SUCCESSFUL!" -ForegroundColor Green
+Write-Host "Restart Gateway: openclaw gateway restart"
 Write-Host "========================================"
+Write-Host ""
