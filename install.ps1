@@ -8,7 +8,7 @@ Write-Host "=== complaint-order Auto Installer ===" -ForegroundColor Cyan
 Write-Host ""
 
 # ==============================================
-# 🔥 超强 OpenClaw 目录查找逻辑（增强版）
+# OpenClaw 目录查找
 # ==============================================
 function Find-OpenClaw {
     $paths = @(
