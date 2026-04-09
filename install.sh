@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# complaint-order 技能自动安装脚本
-# 支持终端输入账号密码 + 自动配置 + 自动装依赖
+# 优化版：complaint-order 功能自动安装脚本  支持终端输入账号密码 + 自动配置 + 自动安装依赖
 
 # 颜色定义
 GREEN='\033[0;32m'
@@ -10,13 +9,14 @@ CYAN='\033[0;36m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-echo -e "${CYAN}=== complaint-order 技能 自动安装 ===${NC}"
+clear
+echo -e "${CYAN}=== complaint-order 功能 自动安装 ===${NC}"
 echo ""
 
 # 路径定义
 HOME_DIR="$HOME"
 OPENCLAW_DIR="$HOME_DIR/.openclaw"
-SKILLS_DIR="$OPENCLAW_DIR/workspace/skills"
+SKILLS_DIR="$OPENCLAW_DIR/skills"
 TARGET_DIR="$SKILLS_DIR/complaint-order"
 TEMP_DIR="/tmp/complaint-order"
 
@@ -38,8 +38,14 @@ if [ -d "$TARGET_DIR" ]; then
     echo ""
 fi
 
-# [3/5] 下载技能
-echo -e "${YELLOW}[3/5] 下载技能中...${NC}"
+# [3/5] 创建目录
+echo -e "${YELLOW}[3/5] 创建目录中...${NC}"
+mkdir -p "$TARGET_DIR"
+echo -e "${GREEN}[OK]${NC}"
+echo ""
+
+# [4/5] 下载
+echo -e "${YELLOW}[4/5] 下载功能中...${NC}"
 rm -rf "$TEMP_DIR"
 curl -fsSL "https://github.com/duheng-ai/complaint-order/archive/refs/heads/main.zip" -o "$TEMP_DIR.zip"
 if [ $? -ne 0 ]; then
@@ -49,42 +55,39 @@ fi
 
 # 解压
 unzip -q "$TEMP_DIR.zip" -d "$TEMP_DIR"
-mv "$TEMP_DIR/complaint-order-main"/* "$TEMP_DIR/"
+mv "$TEMP_DIR/complaint-order-main"/* "$TARGET_DIR/"
 rm -rf "$TEMP_DIR/complaint-order-main"
 rm "$TEMP_DIR.zip"
 echo -e "${GREEN}[OK]${NC}"
 echo ""
 
-# [4/5] 配置账号密码
-echo -e "${YELLOW}[4/5] 配置账号密码${NC}"
+# ======================
+# 优化点：终端输入账号密码
+# ======================
+echo -e "${YELLOW}[5/5] 配置账号密码${NC}"
 echo ""
 read -p "请输入登录手机号：" PHONE
 read -sp "请输入登录密码：" PASSWORD
 echo ""
 echo ""
 
-# 修改 index.js
-INDEX_FILE="$TEMP_DIR/index.js"
+# 读取 index.js
+INDEX_FILE="$TARGET_DIR/index.js"
 if [ -f "$INDEX_FILE" ]; then
-    # 使用 sed 替换账号密码
+    # 替换账号密码（保留其他配置）
     sed -i.bak "s/phone: \".*\"/phone: \"$PHONE\"/" "$INDEX_FILE"
     sed -i.bak "s/password: \".*\"/password: \"$PASSWORD\"/" "$INDEX_FILE"
     rm "$INDEX_FILE.bak"
-    echo -e "${GREEN}✅ 账号已自动配置完成${NC}"
+    echo -e "${GREEN}✅ 账号已自动配置完成！${NC}"
     echo ""
 else
     echo -e "${RED}⚠️  未找到 index.js，跳过配置${NC}"
     echo ""
 fi
 
-# [5/5] 移动到目标目录并安装依赖
-echo -e "${YELLOW}[5/5] 安装技能到 OpenClaw...${NC}"
-mkdir -p "$SKILLS_DIR"
-mv "$TEMP_DIR" "$TARGET_DIR"
-echo -e "${GREEN}[OK] $TARGET_DIR${NC}"
-echo ""
-
-# 安装依赖
+# ======================
+# 优化点：自动安装依赖
+# ======================
 echo -e "${YELLOW}正在安装 npm 依赖...${NC}"
 cd "$TARGET_DIR"
 npm install
